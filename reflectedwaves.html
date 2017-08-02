@@ -1,0 +1,207 @@
+<html>
+
+<head>
+	<script type="application/x-javascript">
+		var img = new Image();
+	var ctx;	
+	var to = 0;
+	var t = 0;
+	function init(){ 
+		ctx = document.getElementById('canvas').getContext('2d');
+      	img.src = 'descartes.png';
+
+		ctx.lineWidth = 2;
+        ctx.drawImage(img,0,0);
+  		img.src = canvas.toDataURL();
+  		setInterval(draw,1);
+	}		
+	var refcoeff = 0.35;
+	var mhz  = 1;
+	function reset(){
+		t = 0;
+		to = 0;
+	}
+	function setRef(val){
+		refcoeff = Number(val);
+		document.querySelector("#ref").innerHTML = val;
+	}
+	//Don't use this
+	function setMhz(val){
+		mhz = Number(val);
+		reset()
+		document.querySelector("#mhz").innerHTML = val;
+	}
+	function relativeEta(){
+		return (refcoeff+1)/(1-refcoeff);
+	}
+	function relativeEpsilon(){
+		return 1 / (relativeEta()*relativeEta());
+	}
+	function relativeBeta(){
+		return 1/Math.sqrt(relativeEpsilon());
+	}
+	function saw(x){
+		val = x % 3-1.5;
+		return val/1.5;
+	}
+	function tri(x){
+		val = ((x % 3)/3)-0.5;
+		return Math.abs(val);
+	}
+	function square(x){
+		val = x % 3-1.5;
+		if(val<0){
+			return -1;
+		}
+		return 1;
+	}
+	function square(x){
+		val = x % 3-1.5;
+		if(val<0){
+			return -1;
+		}
+		return 1;
+	}
+	var mode = 0;
+	//0 = sin
+	//1 - cosin
+	//2 = rect
+	//3 = triangle
+	function setMode(m){
+		mode = m;
+	}
+	function wave(x){
+		switch(mode){
+			case 0: return Math.sin(x)
+			case 1: return Math.cos(x)
+			case 2: return square(x)
+			case 3: return saw(x)
+			case 4: return tri(x)
+		}
+		// if(val<1.5){
+		// 	return -1;
+		// }
+		return square(x)
+	}
+	function draw() {
+		ctx = document.getElementById('canvas').getContext('2d');
+  		ctx.globalCompositeOperation = 'destination-over';
+		ctx.save;
+  		ctx.clearRect(0,0,1000,350); // clear canvas
+		// ctx.drawImage(img,0,0);
+		
+		var time = new Date();
+		min=time.getMinutes();
+		sec=time.getSeconds(); // in microsecs in simulation time
+		msec=time.getMilliseconds(); // in microsecs in simulation time
+		t=1000*(sec+60*min)+msec; // real time, "milliseconds part"
+		t=t*1000; // real time in microsecs
+		if(to===0){to=t;}
+		var abstime = t-to;
+		ctx.font="14px Verdana";
+		ctx.fillText("t="+(abstime)/1000/1000+" us",10,10); // prints time of simulated waveform
+		ctx.beginPath();
+		ctx.strokeStyle = "black";
+		ctx.moveTo(0,150);
+		ctx.lineTo(900,150);
+		ctx.stroke();
+		ctx.fillText("z=900 m",460,166);
+		ctx.fillText("z=1800 m",820,166);
+		ctx.beginPath();
+		ctx.strokeStyle = "grey";
+		ctx.rect(450,50,450,200);
+		// ctx.moveTo(450,600);
+		// ctx.lineTo(450,0);
+		ctx.stroke();
+		ctx.fillText("\u03b7=120\u03c0",50,70)
+		ctx.fillText("\u03b7="+(relativeEta()*120).toFixed(2)+"\u03c0",500,70)
+		ctx.beginPath();
+		ctx.strokeStyle = "blue";
+		
+		wo=(2*Math.PI/1000/1000)*mhz; // simulates 1 MHz signal with 300 m wavelength
+		ko=2*Math.PI/150;
+		z=0;
+		phase=wo*(abstime)-ko*z;
+		if(phase<0){
+			f=0;
+			}
+			else
+			{
+				f=wave(phase);
+				}
+		phaser=wo*(abstime-6*1000*1000)+ko*z;
+		if(phaser<0){
+			fr=0;
+			}
+			else{
+				fr=wave(phaser);
+				}
+		ctx.moveTo(z,150-50*(f+fr*refcoeff));
+		for (z=5;z<455;z=z+5){
+			phase=wo*(abstime)-ko*z;
+			if(phase<0){
+				f=0;
+				}
+				else{
+					f=wave(phase);
+					}
+			phaser=wo*(abstime-(6*1000*1000)/mhz)+ko*z;
+			if(phaser<0){
+				fr=0;
+				}
+				else
+				{
+					fr=wave(phaser);
+				}
+
+			ctx.lineTo(z,150-50*(f+fr*refcoeff));
+	    	ctx.stroke();
+		}
+		
+// if(abstime>6){
+	ctx.beginPath();
+		ctx.strokeStyle = "red";
+
+		wo=(2*Math.PI/1000/1000)*mhz; // simulates 1 MHz signal with 300 m wavelength
+		ko=relativeBeta()* 2*Math.PI/150;
+		z=450;
+		ctx.moveTo(z,150-50*(f));
+		for (z=450;z<905;z=z+5){
+			phase=wo*(abstime-(3*1000*1000)/mhz)-ko*(z-450);
+			if(phase<0){
+				f=0;
+				}
+				else{
+					f=(1+refcoeff)*wave(phase);
+					}
+
+			ctx.lineTo(z,150-50*(f));
+	    	ctx.stroke();
+		}
+// }
+		ctx.restore;
+	}
+	</script>
+</head>
+
+<body>
+
+	<body onload="init();">
+		<canvas id="canvas" width="1000" height="350"></canvas><br>
+		<input style="width:650px;" value="0.35" type="range" oninput="setRef(this.value)" onchange="setRef(this.value)" step="0.05"
+		 min="-1" max="1" /><span id="reF">0.35</span><br>
+		<input style="width:650px;" value="1" type="range" oninput="setMhz(this.value)" onchange="setMhz(this.value)" step="0.05"
+		 min="0.1" max="5" /><span id="mhz">1</span>mhz
+		<br>
+		<button onclick="setMode(0)">Sin</button> <button onclick="setMode(1)">Cosin</button> <button onclick="setMode(2)">Square</button>  <button onclick="setMode(3)">Sawtooth</button><button onclick="setMode(4)">Triangle</button>
+		<br>
+		<button onclick="reset()">Reset Simulation</button>
+		<ul>
+			<li>
+				This is a simulation of a wave that is traveling through a vacuum and is incident on some other type of medium. 
+				You can adjust the reflection coefficient of the medium boundry and the frequency and shape of the wave above. 
+			</li>
+		</ul>
+	</body>
+
+</html>
